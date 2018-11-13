@@ -40,21 +40,8 @@ const pm = (function () {
         }).join('&')
     };
 
-    // 获取页面加载时间。
+    // 获取页面的timing
     pMonitor.getLoadTime = () => {
-        const [{domComplete}] = performance.getEntriesByType('navigation');
-        return domComplete
-    };
-    // 获取超时资源
-    pMonitor.getTimeoutRes = (limit = TIMEOUT) => {
-        const isTimeout = setTime(limit);
-        const resourceTimes = performance.getEntriesByType('resource');
-        return resourceTimes
-            .filter(item => isTimeout(getLoadTime(item)))
-            .map(getName);
-    };
-    // 获取各种时间
-    pMonitor.getTimes = () => {
         var performance = window.performance;
 
         if (!performance) {
@@ -83,27 +70,14 @@ const pm = (function () {
         // 可使用 HTML5 Prefetch 预查询 DNS ，见：[HTML5 prefetch](http://segmentfault.com/a/1190000000633364)
         times.lookupDomain = t.domainLookupEnd - t.domainLookupStart;
 
-        //todo tcp
-        // connectend-connectstart
-
-        // dom准备时长
-        // domloading-domIntericative
-
-        //    白屏
-        // domloading - nativatinStart
-
-        //dom解析时间
-        // domloading-domComplete
-
-
-        //【重要】最初的网络请求被发起 到 从服务器接收到第一个字节 的时间
+        //【重要】读取页面第一个字节的时间
         //【原因】这可以理解为用户拿到你的资源占用的时间，加异地机房了么，加CDN 处理了么？加带宽了么？加 CPU 运算速度了么？
         // TTFB 即 Time To First Byte 的意思
         // 维基百科：https://en.wikipedia.org/wiki/Time_To_First_Byte
         times.ttfb = t.responseStart - t.navigationStart;
 
         //【重要】内容加载完成的时间
-        //【原因】页面内容经过 gzip 压缩了么，静态资源 css/js 等压缩了么？
+        //【原因】页面内容经过 gzip 压缩了么，静态资源 img/js 等压缩了么？
         times.request = t.responseEnd - t.requestStart;
 
         //【重要】执行 onload 回调函数的时间
@@ -118,8 +92,18 @@ const pm = (function () {
 
         // TCP 建立连接完成握手的时间
         times.connect = t.connectEnd - t.connectStart;
-
         return times;
+    };
+
+    // 获取超时资源
+    pMonitor.getTimeoutRes = (limit = TIMEOUT) => {
+        const isTimeout = setTime(limit);
+        const resourceTimes = performance.getEntriesByType('resource');
+        console.log(resourceTimes);
+
+        return resourceTimes
+            .filter(item => isTimeout(getLoadTime(item)))
+            .map(getName);
     };
 
     // 上报数据
@@ -131,7 +115,6 @@ const pm = (function () {
             method,
             ...body
         };
-        console.log(option);
         fetch(urlToUse, option).catch(e => {
             console.log(e);
         });
@@ -140,21 +123,20 @@ const pm = (function () {
     // 封装一个上报两项核心数据的方法
     pMonitor.logPackage = () => {
         const {url, timeoutUrl, method} = config;
-        // const domComplete = pMonitor.getLoadTime();
-        const domComplete = pMonitor.getTimes();
-        const timeoutRes = pMonitor.getTimeoutRes(config.timeout);
-        // 上报页面加载啊时间
-        console.log(domComplete);
-        pMonitor.log(url, domComplete, method);
 
+        const times = pMonitor.getLoadTime();
+        console.log(times);
+
+        // 资源加载时间
+        const timeoutRes = pMonitor.getTimeoutRes(config.timeout);
+        console.log(timeoutRes);
+
+        // 上传times。
+        pMonitor.log(url, times, method);
+
+        // 如果存在超时资源，则上传超时资源的timing
         if (timeoutRes.length) {
-            pMonitor.log(
-                timeoutUrl,
-                {
-                    timeoutRes
-                },
-                method
-            )
+            pMonitor.log(timeoutUrl, timeoutRes, method)
         }
     };
 
@@ -184,7 +166,7 @@ const pm = (function () {
      * @param {number=} [option.timeout=10000]
      */
     pMonitor.init = option => {
-        const {url, timeoutUrl, method = 'POST', timeout = 10000} = option;
+        const {url, timeoutUrl, method = 'POST', timeout = 1} = option;
         config = {
             url,
             timeoutUrl,

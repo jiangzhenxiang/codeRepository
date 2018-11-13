@@ -66,7 +66,7 @@ var reportDataList = [];
                 }
             }
         };
-        //监控资源加载错误(img,script,css,以及jsonp)
+        //监控资源加载错误(img,script,img,以及jsonp)
         window.addEventListener('error',function(e){
             defaults.t =new Date().getTime();
             defaults.msg =e.target.localName+' is load error';
