@@ -92,10 +92,14 @@ const pm = (function () {
 
         // TCP 建立连接完成握手的时间
         times.connect = t.connectEnd - t.connectStart;
+
+        console.log(t);
+        console.log(times);
         return times;
     };
 
     // 获取超时资源
+    /**
     pMonitor.getTimeoutRes = (limit = TIMEOUT) => {
         const isTimeout = setTime(limit);
         const resourceTimes = performance.getEntriesByType('resource');
@@ -105,39 +109,62 @@ const pm = (function () {
             .filter(item => isTimeout(getLoadTime(item)))
             .map(getName);
     };
+     */
+    pMonitor.getTimeoutRes = (limit = TIMEOUT) => {
+        let resource = performance.getEntriesByType('resource')
+        let ajaxMsg = [];
+        let pushArr = []
+        let resourceTime = 0
+        resource.forEach((item)=>{
+            let json = {
+                name:item.name,
+                method:'GET',
+                type:item.initiatorType,
+                duration:item.duration.toFixed(2)||0,
+                decodedBodySize:item.decodedBodySize||0,
+                nextHopProtocol:item.nextHopProtocol,
+            }
+            for(let i=0,len=ajaxMsg.length;i<len;i++){
+                if(ajaxMsg[i][1]===item.name){
+                    json.method = ajaxMsg[i][0]||'GET'
+                }
+            }
+            resourceTime+=item.duration
+            pushArr.push(json)
+        })
 
-    // 上报数据
-    pMonitor.log = (url, data = {}, type = 'POST') => {
-        const method = type.toLowerCase();
-        const urlToUse = method === 'get' ? `${url}?${makerItStr(data)}` : url;
-        const body = method === 'get' ? {} : {body: convert2FormData(data)};
-        const option = {
-            method,
-            ...body
-        };
-        fetch(urlToUse, option).catch(e => {
-            console.log(e);
-        });
+        console.log(pushArr);
+        return pushArr;
     };
+
+
 
     // 封装一个上报两项核心数据的方法
     pMonitor.logPackage = () => {
         const {url, timeoutUrl, method} = config;
 
         const times = pMonitor.getLoadTime();
-        console.log(times);
 
         // 资源加载时间
         const timeoutRes = pMonitor.getTimeoutRes(config.timeout);
-        console.log(timeoutRes);
 
         // 上传times。
-        pMonitor.log(url, times, method);
+        // pMonitor.log(url, times, method);
 
         // 如果存在超时资源，则上传超时资源的timing
-        if (timeoutRes.length) {
-            pMonitor.log(timeoutUrl, timeoutRes, method)
-        }
+        // if (timeoutRes.length) {
+        //     pMonitor.log(timeoutUrl, timeoutRes, method)
+        // }
+
+        fetch(url,{
+            method: method,
+            body:JSON.stringify({
+                times: times,
+                timeoutRes: timeoutRes
+            })
+        }).then(function(response) {
+            // console.log(response)
+        })
     };
 
     //性能监控只是辅助功能，不应阻塞页面加载，因此只有当页面完成加载后，我们才进行数据获取和上报
