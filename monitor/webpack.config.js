@@ -17,7 +17,13 @@ module.exports = {
         new CleanWebpackPlugin(['dist']),
         new ManifestPlugin(),
         new HtmlWebpackPlugin({
-            title: 'Output Management'
+            filename: 'index.html',
+            template: './index.html',
+            inject: true,
+            minify: {
+                removeComments: true,
+                collapseWhitespace: true
+            }
         }),
         new webpack.NamedModulesPlugin(),
         new webpack.HotModuleReplacementPlugin()
