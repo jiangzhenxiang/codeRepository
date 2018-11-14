@@ -1,6 +1,4 @@
 const base = {
-    log() {
-    },
     logPackage() {
     },
     getLoadTime() {
@@ -18,27 +16,6 @@ const pm = (function () {
     if (!window.performance) return base;
     const pMonitor = {...base};
     let config = {};
-
-    // 出于简化考虑，定义 10s 为超时界限，那么获取超时资源的方法如下：
-    const SEC = 1000;
-    const TIMEOUT = 10 * SEC;
-    const setTime = (limit = TIMEOUT) => time => time >= limit;
-    const getLoadTime = ({startTime, responseEnd}) => responseEnd - startTime;
-    const getName = ({name}) => name;
-
-    // 因为获取数据之后，需要向服务端上报：
-    // 生成表单数据
-    const convert2FormData = (data) => {
-        const formData = new FormData();
-        Object.keys(data).forEach(key => formData.append(key, data[key]));
-        return formData;
-    };
-    // 拼接 GET 时的url
-    const makerItStr = (data = {}) => {
-        Object.entries(data).map(([k, v]) => {
-            `${k} = ${v}`
-        }).join('&')
-    };
 
     // 获取页面的timing
     pMonitor.getLoadTime = () => {
@@ -99,70 +76,50 @@ const pm = (function () {
     };
 
     // 获取超时资源
-    /**
-    pMonitor.getTimeoutRes = (limit = TIMEOUT) => {
-        const isTimeout = setTime(limit);
-        const resourceTimes = performance.getEntriesByType('resource');
-        console.log(resourceTimes);
-
-        return resourceTimes
-            .filter(item => isTimeout(getLoadTime(item)))
-            .map(getName);
-    };
-     */
-    pMonitor.getTimeoutRes = (limit = TIMEOUT) => {
+    pMonitor.getTimeoutRes = () => {
         let resource = performance.getEntriesByType('resource')
         let ajaxMsg = [];
-        let pushArr = []
-        let resourceTime = 0
-        resource.forEach((item)=>{
+        let pushArr = [];
+        let resourceTime = 0;
+        resource.forEach((item) => {
             let json = {
-                name:item.name,
-                method:'GET',
-                type:item.initiatorType,
-                duration:item.duration.toFixed(2)||0,
-                decodedBodySize:item.decodedBodySize||0,
-                nextHopProtocol:item.nextHopProtocol,
-            }
-            for(let i=0,len=ajaxMsg.length;i<len;i++){
-                if(ajaxMsg[i][1]===item.name){
-                    json.method = ajaxMsg[i][0]||'GET'
+                name: item.name,
+                method: 'GET',
+                type: item.initiatorType,
+                duration: item.duration.toFixed(2) || 0,
+                decodedBodySize: item.decodedBodySize || 0,
+                nextHopProtocol: item.nextHopProtocol,
+            };
+            for (let i = 0, len = ajaxMsg.length; i < len; i++) {
+                if (ajaxMsg[i][1] === item.name) {
+                    json.method = ajaxMsg[i][0] || 'GET'
                 }
             }
-            resourceTime+=item.duration
+            resourceTime += item.duration;
             pushArr.push(json)
-        })
+        });
 
         console.log(pushArr);
         return pushArr;
     };
 
-
-
     // 封装一个上报两项核心数据的方法
     pMonitor.logPackage = () => {
-        const {url, timeoutUrl, method} = config;
+        const {url, method} = config;
 
+        // 页面的timing
         const times = pMonitor.getLoadTime();
 
         // 资源加载时间
-        const timeoutRes = pMonitor.getTimeoutRes(config.timeout);
+        const timeoutRes = pMonitor.getTimeoutRes();
 
-        // 上传times。
-        // pMonitor.log(url, times, method);
-
-        // 如果存在超时资源，则上传超时资源的timing
-        // if (timeoutRes.length) {
-        //     pMonitor.log(timeoutUrl, timeoutRes, method)
-        // }
-
-        fetch(url,{
+        fetch(url, {
             method: method,
-            body:JSON.stringify({
+            body: JSON.stringify({
                 times: times,
                 timeoutRes: timeoutRes
             })
-        }).then(function(response) {
+        }).then(function (response) {
             // console.log(response)
         })
     };
@@ -193,12 +150,10 @@ const pm = (function () {
      * @param {number=} [option.timeout=10000]
      */
     pMonitor.init = option => {
-        const {url, timeoutUrl, method = 'POST', timeout = 1} = option;
+        const {url, method = 'POST'} = option;
         config = {
             url,
-            timeoutUrl,
-            method,
-            timeout
+            method
         };
         // 绑定事件 用于触发上报数据
         pMonitor.bindEvent()
