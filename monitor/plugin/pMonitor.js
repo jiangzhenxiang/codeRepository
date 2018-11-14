@@ -124,6 +124,7 @@ const pm = (function () {
         })
     };
 
+    // 当页面 DOM 结构中的 js、css、图片，以及 js 异步加载的 js、css 、图片都加载完成之后，才会触发 load 事件
     //性能监控只是辅助功能，不应阻塞页面加载，因此只有当页面完成加载后，我们才进行数据获取和上报
     // 事件绑定
     pMonitor.bindEvent = () => {
@@ -133,6 +134,7 @@ const pm = (function () {
                 oldOnload(e);
             }
             // 尽量不影响页面主线程
+            // window.requestIdleCallback()会在浏览器空闲时期依次调用函数
             if (window.requestIdleCallback) {
                 window.requestIdleCallback(pMonitor.logPackage)
             } else {
