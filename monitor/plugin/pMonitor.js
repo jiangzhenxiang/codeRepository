@@ -113,6 +113,7 @@ const pm = (function () {
         // 资源加载时间
         const timeoutRes = pMonitor.getTimeoutRes();
 
+        // fetch方式上传 可能存在跨域问题
         fetch(url, {
             method: method,
             body: JSON.stringify({
@@ -121,7 +122,12 @@ const pm = (function () {
             })
         }).then(function (response) {
             // console.log(response)
-        })
+        });
+
+
+        //或者构造空的Image对象的方式，请求图片并不涉及到跨域的问题；
+        // const myImage = new Image();
+        // myImage.src = url;
     };
 
     // 当页面 DOM 结构中的 js、css、图片，以及 js 异步加载的 js、css 、图片都加载完成之后，才会触发 load 事件
