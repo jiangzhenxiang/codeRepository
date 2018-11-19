@@ -62,13 +62,13 @@ const pm = (function () {
         times.loadEvent = t.loadEventEnd - t.loadEventStart;
 
         // DNS 缓存时间
-        times.appcache = t.domainLookupStart - t.fetchStart;
+        times.dnsCache = t.domainLookupStart - t.fetchStart;
 
         // 卸载页面的时间
         times.unloadEvent = t.unloadEventEnd - t.unloadEventStart;
 
         // TCP 建立连接完成握手的时间
-        times.connect = t.connectEnd - t.connectStart;
+        times.TCPconnect = t.connectEnd - t.connectStart;
 
         console.log(t);
         console.log(times);
